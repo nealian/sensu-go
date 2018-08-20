@@ -7,6 +7,6 @@ var logger = logrus.WithFields(logrus.Fields{
 })
 
 // Run lauches the migration process
-func Run(storeURL string) {
-	environments(storeURL)
+func Run(storeURLs []string) {
+	environments(storeURLs)
 }

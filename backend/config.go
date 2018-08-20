@@ -38,7 +38,7 @@ type Config struct {
 	EtcdInitialClusterToken     string
 	EtcdInitialClusterState     string
 	EtcdInitialCluster          string
-	EtcdListenClientURL         string
+	EtcdListenClientURLs        string
 	EtcdListenPeerURL           string
 	EtcdName                    string
 

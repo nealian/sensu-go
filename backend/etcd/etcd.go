@@ -16,6 +16,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/coreos/etcd/clientv3"
@@ -54,7 +55,7 @@ type Config struct {
 	DataDir                 string
 	Name                    string // Cluster Member Name
 	ListenPeerURL           string
-	ListenClientURL         string
+	ListenClientURLs        string
 	InitialCluster          string
 	InitialClusterState     string
 	InitialClusterToken     string
@@ -75,7 +76,7 @@ type TLSInfo transport.TLSInfo
 func NewConfig() *Config {
 	c := &Config{}
 	c.DataDir = StateDir
-	c.ListenClientURL = ClientListenURL
+	c.ListenClientURLs = ClientListenURL
 	c.ListenPeerURL = PeerListenURL
 	c.InitialCluster = InitialCluster
 	c.InitialClusterState = ClusterStateNew
@@ -107,9 +108,9 @@ func ensureDir(path string) error {
 
 // Etcd is a wrapper around github.com/coreos/etcd/embed.Etcd
 type Etcd struct {
-	cfg         *Config
-	etcd        *embed.Etcd
-	loopbackURL string
+	cfg          *Config
+	etcd         *embed.Etcd
+	loopbackURLs []string
 }
 
 // BackendID returns the ID of the etcd cluster member
@@ -134,62 +135,76 @@ func NewEtcd(config *Config) (*Etcd, error) {
 	cfg.Dir = cfgDir
 	cfg.WalDir = walDir
 	if err := ensureDir(cfgDir); err != nil {
+		fmt.Println("error 1")
 		return nil, err
 	}
 	if err := ensureDir(walDir); err != nil {
+		fmt.Println("error 2")
 		return nil, err
 	}
 
-	listenClientURL, err := url.Parse(config.ListenClientURL)
-	if err != nil {
-		return nil, err
-	}
-
-	clientURLs := []url.URL{*listenClientURL}
-
-	var loopbackAddr string
-	// ensure we always listen on loopback, use https if we have
-	// a tls configuration.
-	if listenClientURL.Hostname() != "127.0.0.1" && listenClientURL.Hostname() != "localhost" {
-		// ensure we always listen on loopback
-
-		l, err := net.Listen("tcp", "127.0.0.1:0")
+	var loopbackAddrs []string
+	var clientURLs []url.URL
+	listenClientURLs := strings.Split(config.ListenClientURLs, ",")
+	fmt.Printf("LISTEN CLIENT URLS: %v", listenClientURLs)
+	for _, clientURL := range listenClientURLs {
+		listenClientURL, err := url.Parse(clientURL)
 		if err != nil {
+			fmt.Println("error 3")
 			return nil, err
 		}
-		if err := l.Close(); err != nil {
-			logger.Error(err)
+		clientURLs = append(clientURLs, *listenClientURL)
+
+		// ensure we always listen on loopback, use https if we have
+		// a tls configuration.
+		if listenClientURL.Hostname() != "127.0.0.1" && listenClientURL.Hostname() != "localhost" {
+			// ensure we always listen on loopback
+
+			l, err := net.Listen("tcp", "127.0.0.1:0")
+			if err != nil {
+				fmt.Println("error 4")
+				return nil, err
+			}
+			if err = l.Close(); err != nil {
+				fmt.Println("error 5")
+				logger.Error(err)
+			}
+
+			addr, err := net.ResolveTCPAddr("tcp", l.Addr().String())
+			if err != nil {
+				fmt.Println("error 6")
+				return nil, err
+			}
+
+			scheme := "http"
+			if config.TLSConfig != nil {
+				scheme = "https"
+			}
+
+			loopbackClientURL, _ := url.Parse(fmt.Sprintf("%s://127.0.0.1:%d", scheme, addr.Port))
+
+			clientURLs = append(clientURLs, *loopbackClientURL)
+			loopbackAddrs = append(loopbackAddrs, loopbackClientURL.String())
+		} else {
+			loopbackAddrs = append(loopbackAddrs, listenClientURL.String())
 		}
-
-		addr, err := net.ResolveTCPAddr("tcp", l.Addr().String())
-		if err != nil {
-			return nil, err
-		}
-
-		scheme := "http"
-		if config.TLSConfig != nil {
-			scheme = "https"
-		}
-
-		loopbackClientURL, _ := url.Parse(fmt.Sprintf("%s://127.0.0.1:%d", scheme, addr.Port))
-
-		clientURLs = append(clientURLs, *loopbackClientURL)
-		loopbackAddr = loopbackClientURL.String()
-	} else {
-		loopbackAddr = listenClientURL.String()
 	}
+	fmt.Println(clientURLs)
+	fmt.Println(loopbackAddrs)
 
 	listenPeerURL, err := url.Parse(config.ListenPeerURL)
 	if err != nil {
+		fmt.Println("error 7")
 		return nil, err
 	}
 
 	advertisePeerURL, err := url.Parse(config.InitialAdvertisePeerURL)
 	if err != nil {
+		fmt.Println("error 8")
 		return nil, err
 	}
 
-	cfg.ACUrls = []url.URL{*listenClientURL}
+	cfg.ACUrls = clientURLs
 	cfg.APUrls = []url.URL{*advertisePeerURL}
 	cfg.LCUrls = clientURLs
 	cfg.LPUrls = []url.URL{*listenPeerURL}
@@ -215,8 +230,10 @@ func NewEtcd(config *Config) (*Etcd, error) {
 
 	capnslog.SetFormatter(NewLogrusFormatter())
 
+	fmt.Println(cfg)
 	e, err := embed.StartEtcd(cfg)
 	if err != nil {
+		fmt.Println("error 9")
 		return nil, err
 	}
 
@@ -225,10 +242,11 @@ func NewEtcd(config *Config) (*Etcd, error) {
 		logger.Info("Etcd ready to serve client connections")
 	case <-time.After(EtcdStartupTimeout * time.Second):
 		e.Server.Stop()
+		fmt.Println("error 10")
 		return nil, fmt.Errorf("Etcd failed to start in %d seconds", EtcdStartupTimeout)
 	}
 
-	return &Etcd{config, e, loopbackAddr}, nil
+	return &Etcd{config, e, loopbackAddrs}, nil
 }
 
 // Name returns the configured name for Etcd.
@@ -262,7 +280,7 @@ func (e *Etcd) NewClient() (*clientv3.Client, error) {
 	}
 
 	cli, err := clientv3.New(clientv3.Config{
-		Endpoints:   []string{e.loopbackURL},
+		Endpoints:   e.loopbackURLs,
 		DialTimeout: 5 * time.Second,
 		TLS:         tlsCfg,
 	})
@@ -280,11 +298,11 @@ func (e *Etcd) Healthy() bool {
 		return false
 	}
 	mapi := clientv3.NewMaintenance(client)
-	_, err = mapi.Status(context.TODO(), e.cfg.ListenClientURL)
+	_, err = mapi.Status(context.TODO(), e.cfg.ListenClientURLs)
 	return err == nil
 }
 
-// LoopbackURL returns the lookback URL used by etcd
-func (e *Etcd) LoopbackURL() string {
-	return e.loopbackURL
+// LoopbackURLs returns the lookback URLs used by etcd
+func (e *Etcd) LoopbackURLs() []string {
+	return e.loopbackURLs
 }

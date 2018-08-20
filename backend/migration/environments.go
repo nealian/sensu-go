@@ -14,11 +14,11 @@ import (
 // breaking change introduced in https://github.com/sensu/sensu-go/pull/574,
 // which effectively prevent users to update their environments because the new
 // organization attribute is required.
-func environments(storeURL string) {
+func environments(storeURLs []string) {
 	logger.Info("running environments migration")
 
 	client, err := clientv3.New(clientv3.Config{
-		Endpoints:   []string{storeURL},
+		Endpoints:   storeURLs,
 		DialTimeout: 5 * time.Second,
 	})
 

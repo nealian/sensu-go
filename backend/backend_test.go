@@ -78,7 +78,7 @@ func TestBackendHTTPListener(t *testing.T) {
 				DashboardHost:               "127.0.0.1",
 				DashboardPort:               dashboardPort,
 				StateDir:                    path,
-				EtcdListenClientURL:         clURL,
+				EtcdListenClientURLs:        clURL,
 				EtcdListenPeerURL:           apURL,
 				EtcdInitialCluster:          initCluster,
 				EtcdInitialClusterState:     etcd.ClusterStateNew,

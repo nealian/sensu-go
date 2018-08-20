@@ -66,7 +66,7 @@ func Initialize(config *Config) (*Backend, error) {
 	// the Wizard bus, which requires etcd to be started.
 	cfg := etcd.NewConfig()
 	cfg.DataDir = config.StateDir
-	cfg.ListenClientURL = config.EtcdListenClientURL
+	cfg.ListenClientURLs = config.EtcdListenClientURLs
 	cfg.ListenPeerURL = config.EtcdListenPeerURL
 	cfg.InitialCluster = config.EtcdInitialCluster
 	cfg.InitialClusterState = config.EtcdInitialClusterState
@@ -321,8 +321,8 @@ func (e errGroup) Err() <-chan error {
 
 // Migration performs the migration of data inside the store
 func (b *Backend) Migration() error {
-	logger.Infof("starting migration on the store with URL '%s'", b.Etcd.LoopbackURL())
-	migration.Run(b.Etcd.LoopbackURL())
+	logger.Infof("starting migration on the store with URL '%s'", b.Etcd.LoopbackURLs())
+	migration.Run(b.Etcd.LoopbackURLs())
 	return nil
 }
 

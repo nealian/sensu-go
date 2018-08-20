@@ -40,7 +40,7 @@ const (
 	flagLogLevel              = "log-level"
 
 	// Etcd flag constants
-	flagStoreClientURL               = "listen-client-urls"
+	flagStoreClientURLs              = "listen-client-urls"
 	flagStorePeerURL                 = "listen-peer-urls"
 	flagStoreInitialCluster          = "initial-cluster"
 	flagStoreInitialAdvertisePeerURL = "initial-advertise-peer-urls"
@@ -111,7 +111,7 @@ func newStartCommand() *cobra.Command {
 				DeregistrationHandler: viper.GetString(flagDeregistrationHandler),
 				StateDir:              viper.GetString(flagStateDir),
 
-				EtcdListenClientURL:         viper.GetString(flagStoreClientURL),
+				EtcdListenClientURLs:        viper.GetString(flagStoreClientURLs),
 				EtcdListenPeerURL:           viper.GetString(flagStorePeerURL),
 				EtcdInitialCluster:          viper.GetString(flagStoreInitialCluster),
 				EtcdInitialClusterState:     viper.GetString(flagStoreInitialClusterState),
@@ -210,7 +210,7 @@ func newStartCommand() *cobra.Command {
 	viper.SetDefault(flagLogLevel, "warn")
 
 	// Etcd defaults
-	viper.SetDefault(flagStoreClientURL, defaultEtcdClientURL)
+	viper.SetDefault(flagStoreClientURLs, defaultEtcdClientURL)
 	viper.SetDefault(flagStorePeerURL, defaultEtcdPeerURL)
 	viper.SetDefault(flagStoreInitialCluster,
 		fmt.Sprintf("%s=%s", defaultEtcdName, defaultEtcdPeerURL))
@@ -239,7 +239,7 @@ func newStartCommand() *cobra.Command {
 	cmd.Flags().String(flagLogLevel, viper.GetString(flagLogLevel), "logging level [panic, fatal, error, warn, info, debug]")
 
 	// Etcd flags
-	cmd.Flags().String(flagStoreClientURL, viper.GetString(flagStoreClientURL), "store listen client URL")
+	cmd.Flags().String(flagStoreClientURLs, viper.GetString(flagStoreClientURLs), "store listen client URLs (comma separated)")
 	cmd.Flags().String(flagStorePeerURL, viper.GetString(flagStorePeerURL), "store listen peer URL")
 	cmd.Flags().String(flagStoreInitialCluster, viper.GetString(flagStoreInitialCluster), "store initial cluster")
 	cmd.Flags().String(flagStoreInitialAdvertisePeerURL, viper.GetString(flagStoreInitialAdvertisePeerURL), "store initial advertise peer URL")
