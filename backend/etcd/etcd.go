@@ -135,22 +135,18 @@ func NewEtcd(config *Config) (*Etcd, error) {
 	cfg.Dir = cfgDir
 	cfg.WalDir = walDir
 	if err := ensureDir(cfgDir); err != nil {
-		fmt.Println("error 1")
 		return nil, err
 	}
 	if err := ensureDir(walDir); err != nil {
-		fmt.Println("error 2")
 		return nil, err
 	}
 
 	var loopbackAddrs []string
 	var clientURLs []url.URL
 	listenClientURLs := strings.Split(config.ListenClientURLs, ",")
-	fmt.Printf("LISTEN CLIENT URLS: %v", listenClientURLs)
 	for _, clientURL := range listenClientURLs {
 		listenClientURL, err := url.Parse(clientURL)
 		if err != nil {
-			fmt.Println("error 3")
 			return nil, err
 		}
 		clientURLs = append(clientURLs, *listenClientURL)
@@ -162,17 +158,14 @@ func NewEtcd(config *Config) (*Etcd, error) {
 
 			l, err := net.Listen("tcp", "127.0.0.1:0")
 			if err != nil {
-				fmt.Println("error 4")
 				return nil, err
 			}
 			if err = l.Close(); err != nil {
-				fmt.Println("error 5")
 				logger.Error(err)
 			}
 
 			addr, err := net.ResolveTCPAddr("tcp", l.Addr().String())
 			if err != nil {
-				fmt.Println("error 6")
 				return nil, err
 			}
 
@@ -189,18 +182,14 @@ func NewEtcd(config *Config) (*Etcd, error) {
 			loopbackAddrs = append(loopbackAddrs, listenClientURL.String())
 		}
 	}
-	fmt.Println(clientURLs)
-	fmt.Println(loopbackAddrs)
 
 	listenPeerURL, err := url.Parse(config.ListenPeerURL)
 	if err != nil {
-		fmt.Println("error 7")
 		return nil, err
 	}
 
 	advertisePeerURL, err := url.Parse(config.InitialAdvertisePeerURL)
 	if err != nil {
-		fmt.Println("error 8")
 		return nil, err
 	}
 
@@ -230,10 +219,8 @@ func NewEtcd(config *Config) (*Etcd, error) {
 
 	capnslog.SetFormatter(NewLogrusFormatter())
 
-	fmt.Println(cfg)
 	e, err := embed.StartEtcd(cfg)
 	if err != nil {
-		fmt.Println("error 9")
 		return nil, err
 	}
 
@@ -242,7 +229,6 @@ func NewEtcd(config *Config) (*Etcd, error) {
 		logger.Info("Etcd ready to serve client connections")
 	case <-time.After(EtcdStartupTimeout * time.Second):
 		e.Server.Stop()
-		fmt.Println("error 10")
 		return nil, fmt.Errorf("Etcd failed to start in %d seconds", EtcdStartupTimeout)
 	}
 
